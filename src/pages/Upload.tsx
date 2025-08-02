@@ -2,10 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
-import { Upload, FileText } from 'lucide-react';
+import { parseFile } from '../utils/fileParser';
+import { Upload, FileText, AlertCircle } from 'lucide-react';
 
 const FileUpload = () => {
   const [error, setError] = useState<string | null>(null);
+  const [resumePreview, setResumePreview] = useState<string | null>(null);
+  const [jobPreview, setJobPreview] = useState<string | null>(null);
+  const [resumeFileName, setResumeFileName] = useState<string | null>(null);
+  const [jobFileName, setJobFileName] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setResumeFile, setJobFile, setResumeText, setJobText } = useAppStore();
 
@@ -18,22 +23,40 @@ const FileUpload = () => {
       return;
     }
 
-    if (type === 'resume') {
-      setResumeFile(file);
-      // Placeholder for file parsing (pdf.js, mammoth.js)
-      setResumeText('Parsed resume text placeholder');
-    } else {
-      setJobFile(file);
-      setJobText('Parsed job text placeholder');
+    try {
+      const text = await parseFile(file);
+      if (type === 'resume') {
+        setResumeFile(file);
+        setResumeText(text);
+        setResumePreview(text.slice(0, 200) + (text.length > 200 ? '...' : ''));
+        setResumeFileName(file.name);
+      } else {
+        setJobFile(file);
+        setJobText(text);
+        setJobPreview(text.slice(0, 200) + (text.length > 200 ? '...' : ''));
+        setJobFileName(file.name);
+      }
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse file');
     }
   };
 
+  const handleTextPaste = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setJobText(text);
+    setJobPreview(text.slice(0, 200) + (text.length > 200 ? '...' : ''));
+    setJobFile(null);
+    setJobFileName(null);
+    setError(null);
+  };
+
   const handleSubmit = () => {
-    if (!useAppStore.getState().resumeFile || !useAppStore.getState().jobFile) {
-      setError('Please upload both a resume and a job posting');
+    const { resumeText, jobText } = useAppStore.getState();
+    if (!resumeText || !jobText) {
+      setError('Please provide both a resume and a job posting');
       return;
     }
-    // Placeholder for AI processing
     navigate('/results');
   };
 
@@ -65,6 +88,15 @@ const FileUpload = () => {
             >
               Drag & drop or click to upload
             </label>
+            {resumeFileName && (
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">Selected: {resumeFileName}</p>
+            )}
+            {resumePreview && (
+              <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                <p className="font-semibold">Preview:</p>
+                <p className="mt-2 p-2 bg-white dark:bg-gray-800 rounded-lg border">{resumePreview}</p>
+              </div>
+            )}
           </div>
         </div>
         <div className="glass-card p-6">
@@ -86,19 +118,33 @@ const FileUpload = () => {
             >
               Drag & drop or click to upload
             </label>
+            {jobFileName && (
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">Selected: {jobFileName}</p>
+            )}
+            {jobPreview && (
+              <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                <p className="font-semibold">Preview:</p>
+                <p className="mt-2 p-2 bg-white dark:bg-gray-800 rounded-lg border">{jobPreview}</p>
+              </div>
+            )}
           </div>
           <textarea
             className="mt-4 w-full p-4 border rounded-lg dark:bg-gray-700 dark:text-white"
             placeholder="Or paste job description here"
-            onChange={(e) => setJobText(e.target.value)}
+            onChange={handleTextPaste}
           />
         </div>
       </div>
-      {error && <p className="text-red-500 text-center mt-4">{error}</p>}
+      {error && (
+        <p className="text-red-500 text-center mt-4 flex items-center justify-center">
+          <AlertCircle className="w-5 h-5 mr-2" /> {error}
+        </p>
+      )}
       <div className="text-center mt-8">
         <button
           onClick={handleSubmit}
-          className="px-8 py-3 bg-teal-500 text-white font-semibold rounded-lg hover:bg-teal-600 transition"
+          className="px-8 py-3 bg-teal-500 text-white font-semibold rounded-lg hover:bg-teal-600 transition disabled:bg-gray-400"
+          disabled={!useAppStore.getState().resumeText || !useAppStore.getState().jobText}
         >
           Analyze Now
         </button>
