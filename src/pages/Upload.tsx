@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { parseFile } from '../utils/fileParser';
-import { Upload, FileText, AlertCircle } from 'lucide-react';
+import { analyzeResume } from '../utils/ai';
+import { Upload, FileText, AlertCircle, Loader2 } from 'lucide-react';
 
 const FileUpload = () => {
   const [error, setError] = useState<string | null>(null);
@@ -11,8 +12,25 @@ const FileUpload = () => {
   const [jobPreview, setJobPreview] = useState<string | null>(null);
   const [resumeFileName, setResumeFileName] = useState<string | null>(null);
   const [jobFileName, setJobFileName] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isModelLoading, setIsModelLoading] = useState(true);
   const navigate = useNavigate();
-  const { setResumeFile, setJobFile, setResumeText, setJobText } = useAppStore();
+  const { setResumeFile, setJobFile, setResumeText, setJobText, setCurrentAnalysis, addToHistory } = useAppStore();
+
+  // Check if models are loaded
+  useEffect(() => {
+    const checkModels = async () => {
+      try {
+        // Simulate model loading check (ai.ts handles actual loading)
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate delay
+        setIsModelLoading(false);
+      } catch (err) {
+        setError('Failed to load AI models. Please refresh the page.');
+        setIsModelLoading(false);
+      }
+    };
+    checkModels();
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'resume' | 'job') => {
     const file = e.target.files?.[0];
@@ -51,14 +69,36 @@ const FileUpload = () => {
     setError(null);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const { resumeText, jobText } = useAppStore.getState();
     if (!resumeText || !jobText) {
       setError('Please provide both a resume and a job posting');
       return;
     }
-    navigate('/results');
+
+    try {
+      setIsAnalyzing(true);
+      const analysis = await analyzeResume(resumeText, jobText);
+      setCurrentAnalysis(analysis);
+      addToHistory(analysis);
+      setError(null);
+      navigate('/results');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Analysis failed. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
+
+  if (isModelLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <p className="text-gray-700 dark:text-gray-300 flex items-center">
+          <Loader2 className="w-6 h-6 mr-2 animate-spin" /> Loading AI models...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -144,9 +184,15 @@ const FileUpload = () => {
         <button
           onClick={handleSubmit}
           className="px-8 py-3 bg-teal-500 text-white font-semibold rounded-lg hover:bg-teal-600 transition disabled:bg-gray-400"
-          disabled={!useAppStore.getState().resumeText || !useAppStore.getState().jobText}
+          disabled={isAnalyzing || !useAppStore.getState().resumeText || !useAppStore.getState().jobText}
         >
-          Analyze Now
+          {isAnalyzing ? (
+            <span className="flex items-center">
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Analyzing...
+            </span>
+          ) : (
+            'Analyze Now'
+          )}
         </button>
       </div>
     </motion.div>

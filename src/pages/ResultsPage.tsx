@@ -1,22 +1,62 @@
-
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
-import { FileText, CheckCircle, XCircle } from 'lucide-react';
+import { analyzeResume } from '../utils/ai';
+import { FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 const ResultsPage = () => {
-  const { resumeText } = useAppStore(); // Removed jobText
+  const { resumeText, jobText, setCurrentAnalysis } = useAppStore();
   const [tab, setTab] = useState<'score' | 'feedback' | 'suggestions' | 'keywords'>('score');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Placeholder data
-  const score = 85;
-  const feedback = [
-    { category: 'Skills', text: 'Add "SQL" to your skills section' },
-    { category: 'Experience', text: 'Highlight 3+ years of experience' },
-  ];
-  const suggestions = ['Rephrase "Led a team" to "Managed a 10-person team"'];
-  const matchedKeywords = ['Python', 'JavaScript'];
-  const missingKeywords = ['AWS', 'Agile'];
+  useEffect(() => {
+    const runAnalysis = async () => {
+      try {
+        setLoading(true);
+        const analysis = await analyzeResume(resumeText, jobText);
+        setCurrentAnalysis(analysis);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Analysis failed');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (resumeText && jobText) {
+      runAnalysis();
+    }
+  }, [resumeText, jobText, setCurrentAnalysis]);
+
+  const analysis = useAppStore((state) => state.currentAnalysis);
+
+  if (loading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="container mx-auto px-4 py-8 text-center"
+      >
+        <p className="text-lg text-gray-600 dark:text-gray-300">Analyzing your resume...</p>
+      </motion.div>
+    );
+  }
+
+  if (error || !analysis) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="container mx-auto px-4 py-8 text-center"
+      >
+        <p className="text-red-500 flex items-center justify-center">
+          <AlertCircle className="w-5 h-5 mr-2" /> {error || 'No analysis available'}
+        </p>
+      </motion.div>
+    );
+  }
+
+  const { score, feedback, suggestions, matchedKeywords, missingKeywords } = analysis;
 
   return (
     <motion.div
@@ -98,13 +138,13 @@ const ResultsPage = () => {
                   <span
                     key={i}
                     className={
-                      matchedKeywords.includes(word)
+                      matchedKeywords.includes(word.toLowerCase())
                         ? 'bg-green-100 text-green-700 px-1 rounded'
-                        : missingKeywords.includes(word)
+                        : missingKeywords.includes(word.toLowerCase())
                         ? 'bg-red-100 text-red-700 px-1 rounded'
                         : ''
                     }
-                    title={missingKeywords.includes(word) ? `Missing keyword: ${word}` : ''}
+                    title={missingKeywords.includes(word.toLowerCase()) ? `Missing keyword: ${word}` : ''}
                   >
                     {word}{' '}
                   </span>

@@ -1,3 +1,8 @@
+export interface FeedbackItem {
+  category: 'Skills' | 'Experience' | 'Structure' | 'Analysis';
+  text: string;
+}
+
 export interface Analysis {
   id: string;
   resumeText: string;
@@ -8,9 +13,4 @@ export interface Analysis {
   matchedKeywords: string[];
   missingKeywords: string[];
   timestamp: string;
-}
-
-export interface FeedbackItem {
-  category: 'Skills' | 'Experience' | 'Structure';
-  text: string;
 }
