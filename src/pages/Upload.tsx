@@ -17,12 +17,10 @@ const FileUpload = () => {
   const navigate = useNavigate();
   const { setResumeFile, setJobFile, setResumeText, setJobText, setCurrentAnalysis, addToHistory } = useAppStore();
 
-  // Check if models are loaded
   useEffect(() => {
     const checkModels = async () => {
       try {
-        // Simulate model loading check (ai.ts handles actual loading)
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate delay
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         setIsModelLoading(false);
       } catch (err) {
         setError('Failed to load AI models. Please refresh the page.');
@@ -105,16 +103,20 @@ const FileUpload = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="container mx-auto px-4 py-8"
+      className="container mx-auto px-4 py-10"
     >
-      <h2 className="text-3xl font-bold text-navy-900 dark:text-white mb-6 text-center">Upload Your Files</h2>
-      <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <div className="glass-card p-6">
-          <label className="block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
-            Upload Resume (PDF, DOCX)
+      <h2 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-10">
+        Upload Your Files
+      </h2>
+
+      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        {/* Resume Upload Card */}
+        <div className="rounded-2xl bg-white/60 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-lg p-6">
+          <label className="block text-lg font-medium text-gray-800 dark:text-gray-200 mb-4">
+            Upload Resume (PDF or DOCX)
           </label>
-          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-            <Upload className="w-8 h-8 mx-auto mb-4 text-teal-500" />
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center">
+            <Upload className="w-8 h-8 mx-auto mb-3 text-teal-500" />
             <input
               type="file"
               accept=".pdf,.docx"
@@ -122,29 +124,30 @@ const FileUpload = () => {
               className="hidden"
               id="resume-upload"
             />
-            <label
-              htmlFor="resume-upload"
-              className="cursor-pointer text-teal-500 hover:text-teal-600"
-            >
+            <label htmlFor="resume-upload" className="cursor-pointer text-teal-600 hover:underline">
               Drag & drop or click to upload
             </label>
             {resumeFileName && (
-              <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">Selected: {resumeFileName}</p>
+              <p className="mt-4 text-sm text-gray-700 dark:text-gray-400">Selected: {resumeFileName}</p>
             )}
             {resumePreview && (
-              <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+              <div className="mt-4 text-sm text-gray-700 dark:text-gray-300">
                 <p className="font-semibold">Preview:</p>
-                <p className="mt-2 p-2 bg-white dark:bg-gray-800 rounded-lg border">{resumePreview}</p>
+                <div className="mt-2 p-3 bg-white dark:bg-gray-900 border rounded-lg max-h-40 overflow-y-auto">
+                  {resumePreview}
+                </div>
               </div>
             )}
           </div>
         </div>
-        <div className="glass-card p-6">
-          <label className="block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
-            Upload Job Posting (PDF, DOCX, or Paste Text)
+
+        {/* Job Upload Card */}
+        <div className="rounded-2xl bg-white/60 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-lg p-6">
+          <label className="block text-lg font-medium text-gray-800 dark:text-gray-200 mb-4">
+            Upload Job Posting (PDF, DOCX or Paste)
           </label>
-          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-            <FileText className="w-8 h-8 mx-auto mb-4 text-teal-500" />
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center">
+            <FileText className="w-8 h-8 mx-auto mb-3 text-teal-500" />
             <input
               type="file"
               accept=".pdf,.docx"
@@ -152,44 +155,46 @@ const FileUpload = () => {
               className="hidden"
               id="job-upload"
             />
-            <label
-              htmlFor="job-upload"
-              className="cursor-pointer text-teal-500 hover:text-teal-600"
-            >
+            <label htmlFor="job-upload" className="cursor-pointer text-teal-600 hover:underline">
               Drag & drop or click to upload
             </label>
             {jobFileName && (
-              <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">Selected: {jobFileName}</p>
+              <p className="mt-4 text-sm text-gray-700 dark:text-gray-400">Selected: {jobFileName}</p>
             )}
             {jobPreview && (
-              <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+              <div className="mt-4 text-sm text-gray-700 dark:text-gray-300">
                 <p className="font-semibold">Preview:</p>
-                <p className="mt-2 p-2 bg-white dark:bg-gray-800 rounded-lg border">{jobPreview}</p>
+                <div className="mt-2 p-3 bg-white dark:bg-gray-900 border rounded-lg max-h-40 overflow-y-auto">
+                  {jobPreview}
+                </div>
               </div>
             )}
           </div>
           <textarea
-            className="mt-4 w-full p-4 border rounded-lg dark:bg-gray-700 dark:text-white"
-            placeholder="Or paste job description here"
             onChange={handleTextPaste}
+            placeholder="Or paste job description here..."
+            className="mt-4 w-full p-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-white resize-none h-32"
           />
         </div>
       </div>
+
       {error && (
-        <p className="text-red-500 text-center mt-4 flex items-center justify-center">
+        <p className="text-red-500 text-center mt-6 flex items-center justify-center">
           <AlertCircle className="w-5 h-5 mr-2" /> {error}
         </p>
       )}
-      <div className="text-center mt-8">
+
+      <div className="text-center mt-10">
         <button
           onClick={handleSubmit}
-          className="px-8 py-3 bg-teal-500 text-white font-semibold rounded-lg hover:bg-teal-600 transition disabled:bg-gray-400"
           disabled={isAnalyzing || !useAppStore.getState().resumeText || !useAppStore.getState().jobText}
+          className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isAnalyzing ? (
-            <span className="flex items-center">
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Analyzing...
-            </span>
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Analyzing...
+            </>
           ) : (
             'Analyze Now'
           )}
