@@ -15,10 +15,4 @@ export default defineConfig({
     assetsDir: 'assets',
     sourcemap: true,
   },
-  css: {
-    modules: {
-      generateScopedName: undefined,
-    },
-    postcss: './postcss.config.js', // Make sure PostCSS is configured
-  },
 });
