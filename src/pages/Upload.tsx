@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { parseFile } from '../utils/fileParser';
-import { analyzeResume } from '../utils/ai';
-import { Upload, FileText, AlertCircle, Loader2 } from 'lucide-react';
+import { analyzeResume, initEmbedder } from '../utils/ai';
+import { Upload, FileText, AlertCircle, Loader2, RefreshCcw } from 'lucide-react';
 
 const FileUpload = () => {
   const [error, setError] = useState<string | null>(null);
@@ -20,15 +20,27 @@ const FileUpload = () => {
   useEffect(() => {
     const checkModels = async () => {
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await initEmbedder();
         setIsModelLoading(false);
       } catch (err) {
-        setError('Failed to load AI models. Please refresh the page.');
+        setError('Failed to load AI models. Please try again or refresh the page.');
         setIsModelLoading(false);
       }
     };
     checkModels();
   }, []);
+
+  const handleRetry = async () => {
+    setIsModelLoading(true);
+    setError(null);
+    try {
+      await initEmbedder();
+      setIsModelLoading(false);
+    } catch (err) {
+      setError('Failed to load AI models. Please ensure model files are in /public/models/Xenova/all-MiniLM-L6-v2/ and refresh.');
+      setIsModelLoading(false);
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'resume' | 'job') => {
     const file = e.target.files?.[0];
@@ -98,6 +110,24 @@ const FileUpload = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="text-center">
+          <p className="text-red-500 flex items-center justify-center mb-4">
+            <AlertCircle className="w-6 h-6 mr-2" /> {error}
+          </p>
+          <button
+            onClick={handleRetry}
+            className="inline-flex items-center justify-center px-6 py-2 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-semibold transition-all"
+          >
+            <RefreshCcw className="w-5 h-5 mr-2" /> Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -110,7 +140,6 @@ const FileUpload = () => {
       </h2>
 
       <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-        {/* Resume Upload Card */}
         <div className="rounded-2xl bg-white/60 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-lg p-6">
           <label className="block text-lg font-medium text-gray-800 dark:text-gray-200 mb-4">
             Upload Resume (PDF or DOCX)
@@ -141,7 +170,6 @@ const FileUpload = () => {
           </div>
         </div>
 
-        {/* Job Upload Card */}
         <div className="rounded-2xl bg-white/60 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-lg p-6">
           <label className="block text-lg font-medium text-gray-800 dark:text-gray-200 mb-4">
             Upload Job Posting (PDF, DOCX or Paste)

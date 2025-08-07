@@ -1,4 +1,3 @@
-// src/lib/analyze.ts
 import type { Analysis, FeedbackItem } from '../types';
 import { pipeline, env } from '@xenova/transformers';
 import nlp from 'compromise';
@@ -6,42 +5,51 @@ import nlp from 'compromise';
 let embedder: any = null;
 let generator: any = null;
 
-// Set the model base path to point to public models
 env.localModelPath = '/models/';
+env.allowRemoteModels = false;
 
-// Initialize pipelines once
-async function initPipelines() {
+export async function initEmbedder() {
   if (!embedder) {
     try {
-      embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+      console.log('Loading MiniLM model from /models/Xenova/all-MiniLM-L6-v2');
+      embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+        quantized: true,
+      });
+      console.log('MiniLM model loaded successfully');
     } catch (error) {
       console.error('Failed to load MiniLM model:', error);
-      throw new Error('Unable to initialize feature extraction model.');
-    }
-  }
-
-  if (!generator) {
-    try {
-      generator = await pipeline('text2text-generation', 'Xenova/t5-small');
-    } catch (error) {
-      console.error('Failed to load T5 model:', error);
-      throw new Error('Unable to initialize text generation model.');
+      throw new Error('Unable to initialize feature extraction model. Please ensure model files are in /public/models/Xenova/all-MiniLM-L6-v2/');
     }
   }
 }
 
+async function initGenerator() {
+  if (!generator) {
+    try {
+      console.log('Loading T5 model from /models/Xenova/t5-small');
+      generator = await pipeline('text2text-generation', 'Xenova/t5-small', {
+        quantized: true,
+      });
+      console.log('T5 model loaded successfully');
+      return generator;
+    } catch (error) {
+      console.error('Failed to load T5 model:', error);
+      return null;
+    }
+  }
+  return generator;
+}
+
 export const analyzeResume = async (resumeText: string, jobText: string): Promise<Analysis> => {
   try {
-    await initPipelines();
+    if (!embedder) await initEmbedder();
 
-    // Clean and normalize text
     const cleanText = (text: string) =>
       text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
 
     const cleanedResume = cleanText(resumeText);
     const cleanedJob = cleanText(jobText);
 
-    // 1. Semantic Similarity Score
     const resumeEmbedding = await embedder(cleanedResume, { pooling: 'mean', normalize: true });
     const jobEmbedding = await embedder(cleanedJob, { pooling: 'mean', normalize: true });
 
@@ -54,7 +62,6 @@ export const analyzeResume = async (resumeText: string, jobText: string): Promis
     );
     const score = Math.round(dotProduct * 100);
 
-    // 2. Keyword Extraction
     const jobDoc = nlp(cleanedJob);
     const resumeDoc = nlp(cleanedResume);
 
@@ -75,7 +82,6 @@ export const analyzeResume = async (resumeText: string, jobText: string): Promis
     const matchedKeywords = resumeKeywords.filter((k: string) => jobKeywords.includes(k));
     const missingKeywords = jobKeywords.filter((k: string) => !resumeKeywords.includes(k));
 
-    // 3. Feedback Generation
     const feedback: FeedbackItem[] = [];
     if (missingKeywords.length > 0) {
       feedback.push({
@@ -98,20 +104,24 @@ export const analyzeResume = async (resumeText: string, jobText: string): Promis
       });
     }
 
-    // 4. Rewrite Suggestions
     const suggestions: string[] = [];
-    if (resumeText.length > 0 && generator) {
-      const prompt = `Rephrase the following resume text to align with a job posting: "${resumeText.slice(
-        0,
-        200
-      )}"`;
-      try {
-        const generated = await generator(prompt, { max_length: 100 });
-        const generatedText = (generated as any)[0]?.generated_text ?? 'No rephrasing available';
-        suggestions.push(generatedText);
-      } catch (error) {
-        console.error('T5 generation error:', error);
-        suggestions.push('No rephrasing available due to model error');
+    if (resumeText.length > 0) {
+      const generator = await initGenerator();
+      if (generator) {
+        const prompt = `Rephrase the following resume text to align with a job posting: "${resumeText.slice(
+          0,
+          200
+        )}"`;
+        try {
+          const generated = await generator(prompt, { max_length: 100 });
+          const generatedText = (generated as any)[0]?.generated_text ?? 'No rephrasing available';
+          suggestions.push(generatedText);
+        } catch (error) {
+          console.error('T5 generation error:', error);
+          suggestions.push('No rephrasing available due to model error');
+        }
+      } else {
+        suggestions.push('No rephrasing available');
       }
     } else {
       suggestions.push('No rephrasing available');
