@@ -6,7 +6,7 @@ let embedder: any = null;
 let generator: any = null;
 
 env.localModelPath = '/models/';
-env.allowRemoteModels = false;
+env.allowRemoteModels = true;
 
 export async function initEmbedder() {
   if (!embedder) {
