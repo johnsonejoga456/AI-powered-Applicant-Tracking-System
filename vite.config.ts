@@ -7,7 +7,8 @@ export default defineConfig({
   server: {
     port: 3000,
     fs: {
-      allow: ['.', './public/models'], // Allow model files for Transformers.js
+      // Allow serving files from the project root and public/models
+      allow: ['.', './public/models'],
     },
   },
   build: {

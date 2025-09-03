@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
-import { analyzeResume } from '../utils/ai';
+import { analyzeResume } from '../lib/ai';
 import {
   FileText,
   CheckCircle,
