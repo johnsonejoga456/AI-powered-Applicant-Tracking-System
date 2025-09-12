@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Analysis } from '../types.ts';
+import type { Analysis } from '../../types/analysisTypes.ts';
 
 interface AppState {
   resumeFile: File | null;

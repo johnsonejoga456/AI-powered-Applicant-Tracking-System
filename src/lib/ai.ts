@@ -1,36 +1,25 @@
 // src/lib/ai.ts
-import type { Analysis, FeedbackItem } from '../types';
-import nlp from 'compromise';
-import { pipeline } from '@xenova/transformers';
-
-let embedder: any = null;
-let generator: any = null;
-
-async function loadModels() {
-  if (!embedder) {
-    embedder = await pipeline("feature-extraction", "/models/all-MiniLM-L6-v2");
-  }
-  if (!generator) {
-    generator = await pipeline("text2text-generation", "/models/t5-small");
-  }
-}
+import type { Analysis, FeedbackItem } from "../../types/analysisTypes";
+import nlp from "compromise";
 
 // -------------------
-// Embeddings via MiniLM
+// Embeddings via PuterJS
 // -------------------
 async function getEmbedding(text: string): Promise<number[]> {
-  await loadModels();
-  const result = await embedder(text, { pooling: "mean", normalize: true });
-  return Array.from(result.data);
+  const result = await window.Puter.ai.embed(text, {
+    model: "text-embedding-3-small",
+  });
+  return result.embedding;
 }
 
 // -------------------
-// Text generation via T5
+// Text generation via PuterJS
 // -------------------
 async function generateText(prompt: string): Promise<string> {
-  await loadModels();
-  const output = await generator(prompt, { max_length: 100 });
-  return output[0]?.generated_text ?? "No rephrasing available";
+  const result = await window.Puter.ai.generateText(prompt, {
+    model: "gpt-4o-mini",
+  });
+  return result.output?.trim() || "No rephrasing available";
 }
 
 // -------------------
@@ -46,15 +35,20 @@ export const analyzeResume = async (
   const cleanedResume = cleanText(resumeText);
   const cleanedJob = cleanText(jobText);
 
-  // ✅ Local embeddings
+  // ✅ Embeddings
   const [resumeVector, jobVector] = await Promise.all([
     getEmbedding(cleanedResume),
     getEmbedding(cleanedJob),
   ]);
 
   // ✅ Cosine similarity
-  const dotProduct = resumeVector.reduce((sum, a, i) => sum + a * jobVector[i], 0);
-  const resumeNorm = Math.sqrt(resumeVector.reduce((sum, a) => sum + a * a, 0));
+  const dotProduct = resumeVector.reduce(
+    (sum, a, i) => sum + a * jobVector[i],
+    0
+  );
+  const resumeNorm = Math.sqrt(
+    resumeVector.reduce((sum, a) => sum + a * a, 0)
+  );
   const jobNorm = Math.sqrt(jobVector.reduce((sum, a) => sum + a * a, 0));
   const similarity = dotProduct / (resumeNorm * jobNorm);
   const score = Math.round(similarity * 100);
@@ -62,8 +56,12 @@ export const analyzeResume = async (
   // ✅ Keyword analysis
   const jobKeywords = nlp(cleanedJob).nouns().out("array");
   const resumeKeywords = nlp(cleanedResume).nouns().out("array");
-  const matchedKeywords = resumeKeywords.filter((k: string) => jobKeywords.includes(k));
-  const missingKeywords = jobKeywords.filter((k: string) => !resumeKeywords.includes(k));
+  const matchedKeywords = resumeKeywords.filter((k: string) =>
+    jobKeywords.includes(k)
+  );
+  const missingKeywords = jobKeywords.filter(
+    (k: string) => !resumeKeywords.includes(k)
+  );
 
   // ✅ Feedback
   const feedback: FeedbackItem[] = [];
@@ -77,7 +75,7 @@ export const analyzeResume = async (
   // ✅ Suggestions
   const suggestions: string[] = [];
   if (resumeText.length > 0) {
-    const prompt = `Rephrase this resume snippet to match a job posting: "${resumeText.slice(
+    const prompt = `Rephrase this resume snippet to better match a job posting:\n\n"${resumeText.slice(
       0,
       200
     )}"`;
