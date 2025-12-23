@@ -1,25 +1,61 @@
 // src/lib/ai.ts
 import type { Analysis, FeedbackItem } from "../../types/analysisTypes";
 import nlp from "compromise";
+import { pipeline } from "@xenova/transformers";
+import puter from "@heyputer/puter.js";
+
+// Singleton for the extractor
+let extractor: any = null;
 
 // -------------------
-// Embeddings via PuterJS
+// Embeddings via Xenova (Local)
 // -------------------
 async function getEmbedding(text: string): Promise<number[]> {
-  const result = await window.Puter.ai.embed(text, {
-    model: "text-embedding-3-small",
-  });
-  return result.embedding;
+  try {
+    if (!extractor) {
+      // Use a lightweight model for browser
+      extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+    }
+    const output = await extractor(text, { pooling: "mean", normalize: true });
+    // output.data is a Float32Array, convert to normal array
+    return Array.from(output.data);
+  } catch (error) {
+    console.error("Error generating embedding:", error);
+    return [];
+  }
 }
 
 // -------------------
 // Text generation via PuterJS
 // -------------------
 async function generateText(prompt: string): Promise<string> {
-  const result = await window.Puter.ai.generateText(prompt, {
-    model: "gpt-4o-mini",
-  });
-  return result.output?.trim() || "No rephrasing available";
+  try {
+    // Attempt to use chat (v2 API) or generateText (v1/compat)
+    // using 'any' cast to avoid TS errors if types are incomplete
+    if (!puter.auth.isSignedIn()) {
+      await puter.auth.signIn();
+    }
+    const ai = (puter as any).ai;
+
+    if (ai.chat) {
+      const response = await ai.chat(prompt);
+      // Handle response: might be string or object with content
+      if (typeof response === "string") return response;
+      return response?.message?.content || JSON.stringify(response);
+    }
+
+    if (ai.generateText) {
+      const result = await ai.generateText(prompt, {
+        model: "gpt-4o-mini",
+      });
+      return result.output?.trim() || "No rephrasing available";
+    }
+
+    return "AI capability not found.";
+  } catch (error) {
+    console.error("Error generating text:", error);
+    return "Error: Unable to generate suggestion.";
+  }
 }
 
 // -------------------

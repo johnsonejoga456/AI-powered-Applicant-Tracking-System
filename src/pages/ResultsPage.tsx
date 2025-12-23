@@ -30,10 +30,12 @@ const ResultsPage = () => {
       }
     };
 
-    if (resumeText && jobText) {
+    if (resumeText && jobText && !analysis) {
       runAnalysis();
+    } else {
+      setLoading(false);
     }
-  }, [resumeText, jobText, setCurrentAnalysis]);
+  }, [resumeText, jobText, analysis, setCurrentAnalysis]);
 
   if (loading) {
     return (
@@ -84,11 +86,10 @@ const ResultsPage = () => {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`capitalize text-sm md:text-base font-medium relative pb-2 transition-all ${
-                tab === t
-                  ? 'text-teal-600 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-teal-500'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-teal-500'
-              }`}
+              className={`capitalize text-sm md:text-base font-medium relative pb-2 transition-all ${tab === t
+                ? 'text-teal-600 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-teal-500'
+                : 'text-gray-500 dark:text-gray-400 hover:text-teal-500'
+                }`}
             >
               {t}
             </button>
@@ -167,13 +168,12 @@ const ResultsPage = () => {
                   return (
                     <span
                       key={i}
-                      className={`px-1 rounded ${
-                        isMatched
-                          ? 'bg-green-200 text-green-800'
-                          : isMissing
+                      className={`px-1 rounded ${isMatched
+                        ? 'bg-green-200 text-green-800'
+                        : isMissing
                           ? 'bg-red-200 text-red-800'
                           : ''
-                      }`}
+                        }`}
                     >
                       {word}{' '}
                     </span>

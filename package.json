@@ -20,7 +20,7 @@
     "mammoth": "^1.9.1",
     "natural": "^8.1.0",
     "pdfjs-dist": "^5.4.54",
-    "puter": "^1.0.0",
+    "@heyputer/puter.js": "^2.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.7.1",
